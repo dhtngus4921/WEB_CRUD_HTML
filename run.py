@@ -8,6 +8,7 @@ from flask import abort
 from flask import redirect
 from flask import url_for
 import time
+import math
 
 
 app = Flask(__name__)
@@ -29,16 +30,48 @@ def format_datetime(value):
 @app.route("/list")
 def lists():
     page = request.args.get("page", 1, type=int)
-    limit = request.args.get("limit", 10, type=int)
+    limit = request.args.get("limit", 7, type=int)
+
+    search = request.args.get("search", -1, type=int)
+    keyword = request.args.get("keyword",type=str)
+    
+    query = {}
+    search_list = []
+
+    if search == 0:
+        search_list.append({"title": {"$regex": keyword}})
+    elif search == 1:
+        search_list.append({"contents": {"$regex": keyword}})
+    elif search == 2: 
+        search_list.append({"title": {"$regex": keyword}})
+        search_list.append({"contents": {"$regex": keyword}})
+    elif search == 3:
+        search_list.append({"name": {"$regex": keyword}})
+
+    if len(search_list) > 0:
+        query = {"$or": search_list}
+
     board = mongo.db.board
-    datas = board.find({}).skip((page-1)*limit).limit(limit)
-    return render_template("list.html", datas=datas)
+    datas = board.find(query).skip((page-1)*limit).limit(limit)
+    tot_count = board.find({}).count()
+    last_page_num = math.ceil(tot_count / limit)
+
+    block_size = 5
+    block_num=int((page-1)/block_size)
+    block_start = int((block_size*block_num)+1)
+    block_last = math.ceil(block_start+(block_size-1))
+
+    return render_template("list.html", datas=datas,limit=limit,page=page, block_start=block_start,block_last=block_last,last_page_num=last_page_num,search=search, keyword=keyword)
 
 
 @app.route("/view/<idx>")
 def board_view(idx):
     #idx = request.args.get("idx")
     if idx is not None:
+        page = request.args.get("page")
+        search = request.args.get("search")
+        keyword = request.args.get("keyword")
+
         board = mongo.db.board
         data = board.find_one({"_id": ObjectId(idx)})
 
@@ -51,7 +84,7 @@ def board_view(idx):
                 "pubdate": data.get("pubdate"),
                 "view": data.get("view"),
             }
-            return render_template("view.html", result=result)
+            return render_template("view.html", result=result, page=page, search = search, keyword = keyword)
     return abort(404)
 
 
