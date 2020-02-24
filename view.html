@@ -1,21 +1,29 @@
 {% extends "main.html" %}
 
 {% block content %}
+<table class="table table-bordered">
+    <thead class="thead-dark">
+        <tr>
+            <th scope="col">제목</th>
+            <th scope="col">작성자</th>
+            <th scope="col">작성시간</th>
+            <th scope="col">조회수</th>
+            <th scope="col">내용</th>
 
-{{result.title}}
-<br>
-{{result.name}}
-<br>
-{{result.pubdate|formatdatetime}}
-<br>
-{{result.view}}
-<br>
-{{result.contents}}
-<br>
-<a href="{{url_for('board.lists', page=page, search=search, keyword=keyword)}}">리스트</a>
-
-{% if session["id"] == result.writer_id %}
+        </tr>
+    </thead>
+    <tbody>
+        <td>{{result.title}}</td>
+        <td>{{result.name}}</td>
+        <td>{{result.pubdate|formatdatetime}}</td>
+        <td>{{result.view}}</td>
+        <td>{{result.contents}}</td>
+    </tbody>
+</table>
+<div class="text-right">
+    {% if session["id"] == result.writer_id %}
     <a href="{{url_for('board.board_delete', idx=result.id)}}">글삭제</a>
     <a href="{{url_for('board.board_edit', idx=result.id)}}">글수정</a>
-{% endif%} 
-{% endblock %}
+    {% endif%} 
+    {% endblock %}
+</div>
