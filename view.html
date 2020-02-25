@@ -2,28 +2,23 @@
 
 {% block content %}
 <table class="table table-bordered">
-    <thead class="thead-dark">
-        <tr>
-            <th scope="col">제목</th>
-            <th scope="col">작성자</th>
-            <th scope="col">작성시간</th>
-            <th scope="col">조회수</th>
-            <th scope="col">내용</th>
-
-        </tr>
-    </thead>
     <tbody>
-        <td>{{result.title}}</td>
-        <td>{{result.name}}</td>
-        <td>{{result.pubdate|formatdatetime}}</td>
-        <td>{{result.view}}</td>
-        <td>{{result.contents}}</td>
+        <tr>
+            <td colspan="2">{{result.title}}</td>
+        </tr>
+        <tr>
+            <td>{{result.name}}</td>
+            <td class="text-right">{{result.pubdate | formatdatetime}}</td>
+        </tr>
+        <tr>
+            <td colspan="2"><div style="min-height:200px;">{% autoescape false %}{{result.contents}}{% endautoescape %}</div></td>
+        </tr>
     </tbody>
 </table>
-<div class="text-right">
-    {% if session["id"] == result.writer_id %}
-    <a href="{{url_for('board.board_delete', idx=result.id)}}">글삭제</a>
-    <a href="{{url_for('board.board_edit', idx=result.id)}}">글수정</a>
-    {% endif%} 
-    {% endblock %}
-</div>
+
+{% if session["id"] == result.writer_id %}
+<a class="btn btn-danger float-right ml-2" href="{{url_for('board.board_delete', idx=result.id)}}">글삭제</a>
+<a class="btn btn-warning float-right" href="{{url_for('board.board_edit', idx=result.id)}}">글수정</a>
+{% endif%} 
+{% endblock %}
+

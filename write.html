@@ -2,15 +2,59 @@
 
 {% block content %}
 <script>
+    $(document).ready(function(){
+        $("#summernote").summernote({
+            height: 300,
+            minHeight: null,
+            maxHeight: null,
+            lang: "ko-KR",
+            popover:{
+                image:[],
+                link: [],
+                air: []
+            },
+            callbacks: {
+                onImageUpload: function(image){
+                    for(var i = 0; i < image.length; i++){
+                        uploadImage(image[i]);
+                    }
+                }
+            }
+        });
+    });
+
+    function uploadImage(image){
+        var data = new FormData();
+        console.log(image)
+        data.append("image", image);
+        $.ajax({
+            url: "{{url_for('board.upload_image')}}",
+            cashe: false,
+            contentType: false,
+            processData: false,
+            data: data,
+            type: "post",
+            success: function(url){
+                var image = $("<img>").attr("src", url).css('max-width',"900px");
+                $("#summernote").summernote("insertNode", image[0]);
+            },
+            error: function(data){
+                console.log(data);
+                alert(data);
+            }
+        });
+    }
+</script>
+<script>
     function checkForm(){
         if($.trim($("#title").val()) == ""){
             alert("제목을 작성하시오.");
             $("#title").focus();
             return false;
         }
-        if($.trim($("#contents").val()) == ""){
+        if($.trim($("#summernote").val()) == ""){
             alert("내용을 작성하시오.");
-            $("#contents").focus();
+            $("#summernote").focus();
             return false;
         }
     }
@@ -26,7 +70,7 @@
     </div>
     <div class="form-group">
         <label for="contents">내용</label>
-        <textarea rows="8" class="form-control" name="contents" id="contents" placeholder="내용을 입력하세요."></textarea>
+        <textarea rows="8" class="form-control" name="contents" id="summernote" placeholder="내용을 입력하세요."></textarea>
     </div>
     <div class="text-center"><input class="btn btn-primary" type="submit" value="작성하기"></div>
 </form>
