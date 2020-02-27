@@ -1,7 +1,27 @@
 from functools import wraps
 from main import session, redirect, request, url_for, ALLOWED_EXTENSIONS
 from string import digits, ascii_uppercase, ascii_lowercase
+from werkzeug.security import generate_password_hash, check_password_hash
 import random
+import re
+import os
+
+
+def hash_password(password):
+    return generate_password_hash(password)
+
+
+def check_password(hashed_password, user_password):
+    return check_password_hash(hashed_password, user_password)
+
+
+def check_filename(filename):
+    reg = re.compile("[^A-Za-z0-9_.가-힝-]")
+    for s in os.path.sep, os.path.altsep:
+        if s:
+            filename = filename.replace(s, ' ')
+            filename = str(reg.sub('','_'.join(filename.split()))).strip("._")
+    return filename
 
 
 def allowed_file(filename):

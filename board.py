@@ -4,6 +4,72 @@ from flask import send_from_directory
 
 blueprint = Blueprint("board", __name__, url_prefix="/board")
 
+def board_delete_attach_file(filename):
+    abs_path = os.path.join(app.config["BOARD_ATTACH_FILE_PATH"], filename)
+    if os.path.exists(abs_path):
+        os.remove(abs_path)
+        return True
+    return False
+
+
+@blueprint.route("/comment_delete", methods=["POST"])
+@login_required
+def comment_delete():
+    if request.method == "POST":
+        idx = request.form.get("id")
+        comment = mongo.db.comment
+        data = comment.find_one({"_id": ObjectId(idx)})
+        if data.get("writer_id") == session.get("id"):
+            comment.delete_one({"_id": ObjectId(idx)})
+            return jsonify(error="success")
+        else: return jsonify(error="error")
+    return abort(401)
+
+
+@blueprint.route("/comment_list/<root_idx>", methods=["GET"])
+@login_required
+def comment_list(root_idx):
+    comment = mongo.db.comment
+    comments = comment.find({"root_idx": str(root_idx)}).sort([("pubdate", -1)])
+
+    comment_list = []
+    for c in comments:
+        owner = True if c.get("writer_id") == session.get("id") else False
+        comment_list.append({
+            "id": str(c.get("_id")),
+            "root_idx": c.get("root_idx"),
+            "name": c.get("name"),
+            "writer_id": c.get("writer_id"),
+            "comment": c.get("comment"),
+            "pubdate": format_datetime(c.get("pubdate")),
+            "owner": owner,
+        })
+    return jsonify(error="success", lists=comment_list)
+
+
+@blueprint.route("/comment_write", methods=["POST"])
+@login_required
+def comment_write():
+    if request.method == "POST":
+        name = session.get("name")
+        writer_id = session.get("id")
+        root_idx = request.form.get("root_idx")
+        comment = request.form.get("comment")
+        current_utc_time = round(datetime.utcnow().timestamp() * 1000)
+
+        c_comment = mongo.db.comment
+
+        post = {
+            "root_idx": str(root_idx),
+            "writer_id": writer_id,
+            "name": name,
+            "comment": comment,
+            "pubdate": current_utc_time
+        }
+
+        c_comment.insert_one(post)
+        return redirect(url_for("board.board_view", idx=root_idx))
+
 
 @blueprint.route("/upload_image", methods=["POST"])
 def upload_image():
@@ -20,6 +86,11 @@ def upload_image():
 @blueprint.route("/images/<filename>")
 def board_images(filename):
     return send_from_directory(app.config["BOARD_IMAGE_PATH"], filename)
+
+
+@blueprint.route("/files/<filename>")
+def board_files(filename):
+    return send_from_directory(app.config["BOARD_ATTACH_FILE_PATH"], filename, as_attachment=True)
 
 
 @blueprint.route("/list")
@@ -92,6 +163,7 @@ def board_view(idx):
                 "pubdate": data.get("pubdate"),
                 "view": data.get("view"),
                 "writer_id": data.get("writer_id",""),
+                "attachfile": data.get("attachfile",""),
             }
             return render_template(
                 "view.html", 
@@ -107,11 +179,18 @@ def board_view(idx):
 @login_required
 def board_write():
     if request.method == "POST":
+        filename = None
+        if "attachfile" in request.files:
+            file = request.files["attachfile"]
+            if file and allowed_file(file.filename):
+                filename = check_filename(file.filename)
+                file.save(os.path.join(app.config['BOARD_ATTACH_FILE_PATH'], filename))
+                
         name = request.form.get("name")
         title = request.form.get("title")
         contents = request.form.get("contents")
-        print(name, title, contents)
-
+        
+        request.files
         current_utc_time = round(datetime.utcnow().timestamp() * 1000)
         board = mongo.db.board
         post = {
@@ -122,6 +201,10 @@ def board_write():
             "writer_id": session.get("id"),
             "view": 0,
         }
+
+        if filename is not None:
+            post["attachfile"] = filename
+
         x = board.insert_one(post)
         print(x.inserted_id)
         return redirect(url_for("board.board_view", idx=x.inserted_id))
@@ -146,14 +229,33 @@ def board_edit(idx):
     else:
         title = request.form.get("title")
         contents = request.form.get("contents")
+        deleteoldfile = request.form.get("deleteoldfile", "")
 
         board = mongo.db.board
         data = board.find_one({"_id": ObjectId(idx)})
         if session.get("id") == data.get("writer_id"):
+            filename = None
+            if "attachfile" in request.files:
+                file = request.files["attachfile"]
+                if file and allowed_file(file.filename):
+                    filename = check_filename(file.filename)
+                    file.save(os.path.join(app.config["BOARD_ATTACH_FILE_PATH"], filename))
+                    
+                    if data.get("attachfile"):
+                        board_delete_attach_file(data.get("attachfile"))
+            else:
+                if deleteoldfile == "on":
+                    filename = None
+                    if data.get("attachfile"):
+                        board_delete_attach_file(data.get("attachfile"))
+                else:
+                    filename = data.get("attachfile")
+
             board.update_one({"_id": ObjectId(idx)}, {
                 "$set":{
                     "title": title,
                     "contents": contents,
+                    "attachfile": filename
                 }
             })
             flash("수정되었습니다.")
