@@ -1,0 +1,92 @@
+{% extends "main.html" %}
+
+{% block content %}
+<script>
+    $(document).ready(function(){
+        $("#summernote").summernote({
+            height: 300,
+            minHeight: null,
+            maxHeight: null,
+            lang: "ko-KR",
+            popover:{
+                image:[],
+                link: [],
+                air: []
+            },
+            callbacks: {
+                onImageUpload: function(image){
+                    for(var i = 0; i < image.length; i++){
+                        uploadImage(image[i]);
+                    }
+                }
+            }
+        });
+    });
+
+    function uploadImage(image){
+        var data = new FormData();
+        console.log(image)
+        data.append("image", image);
+        var csrf_token = "{{csrf_token()}}";
+
+        $.ajaxSetup({
+            beforeSend: function(x, s){
+                if(!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(s.type)){
+                    x.setRequestHeader("X-CSRFToken", csrf_token)
+                }
+            } 
+        });
+        
+        $.ajax({
+            url: "{{url_for('board.upload_image')}}",
+            cashe: false,
+            contentType: false,
+            processData: false,
+            data: data,
+            type: "post",
+            success: function(url){
+                var image = $("<img>").attr("src", url).css('max-width',"900px");
+                $("#summernote").summernote("insertNode", image[0]);
+            },
+            error: function(data){
+                console.log(data);
+                alert(data);
+            }
+        });
+    }
+</script>
+<script>
+    function checkForm(){
+        if($.trim($("#title").val()) == ""){
+            alert("제목을 작성하시오.");
+            $("#title").focus();
+            return false;
+        }
+        if($.trim($("#summernote").val()) == ""){
+            alert("내용을 작성하시오.");
+            $("#summernote").focus();
+            return false;
+        }
+    }
+</script>
+<form name="form" method="POST" action="{{url_for('board.board_write')}}" onsubmit="return checkForm()" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{csrf_token()}}">
+    <div class="form-group">
+        <label for="name">작성자</label>
+        <input class="form-control" id="name" type="text" name="name" value="{{session['name']}}" readonly>
+    </div>
+    <div class="form-group">
+        <label for="title">제목</label>
+        <input class="form-control" input type="text" name="title" id="title" placeholder="제목을 입력하세요.">
+    </div>
+    <div class="form-group">
+        <label for="contents">내용</label>
+        <textarea rows="8" class="form-control" name="contents" id="summernote" placeholder="내용을 입력하세요."></textarea>
+    </div>
+    <div class="custom-file">
+        <input class="custom-file-input" id="customFile" type="file" name="attachfile">
+        <label class="custom-file-label" for="customFile">파일선택</label>
+    </div>
+    <div class="text-center"><input class="btn btn-primary" type="submit" value="작성하기"></div>
+</form>
+{% endblock %}
