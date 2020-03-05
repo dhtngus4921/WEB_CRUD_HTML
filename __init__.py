@@ -18,13 +18,13 @@ import os
 
 app = Flask(__name__)
 csrf = CSRFProtect(app)
-app.config["MONGO_URI"] = "mongodb://localhost:27017/myweb"
+app.config["MONGO_URI"] = "mongodb://mongo:27017/myweb"
 app.config["SECRET_KEY"] = "abcd"
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=30)
 mongo = PyMongo(app)
 
-BOARD_IMAGE_PATH = "C:\\python\\images"
-BOARD_ATTACH_FILE_PATH = "C:\\python\\uploads"
+BOARD_IMAGE_PATH = "/images"
+BOARD_ATTACH_FILE_PATH = "/uploads"
 
 ALLOWED_EXTENSIONS = set(["txt", "pdf", "png", "jpg", "jpeg", "gif"])
 
